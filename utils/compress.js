@@ -29,8 +29,10 @@ const compressImage = async (inputPath, outputPath) => {
 
 const compressVideo = (inputPath, outputPath) => {
     return new Promise((resolve, reject) => {
+        console.log(`Running ffmpeg command: ffmpeg -y -i ${inputPath} -vcodec libx264 -crf 28 -preset veryfast ${outputPath}`);
+
         const ffmpegProcess = spawn('ffmpeg', [
-            '-y', 
+            '-y', // Overwrite output file if it already exists
             '-i', inputPath,
             '-vcodec', 'libx264',
             '-crf', '28',
@@ -73,6 +75,7 @@ const compressVideoWithRetry = async (inputPath, outputPath, retries = 3) => {
             await delay(2000); // Wait before retrying
             return compressVideoWithRetry(inputPath, outputPath, retries - 1);
         } else {
+            console.error('Failed to compress video after multiple attempts', error);
             throw new Error('Failed to compress video after multiple attempts');
         }
     }
