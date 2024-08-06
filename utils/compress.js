@@ -106,4 +106,4 @@ const deleteFileIfExists = async (filePath, retries = 3) => {
     }
 };
 
-module.exports = { compressImage, compressVideoWithRetry, generateUniquePath, deleteFileIfExists };
+module.exports = { compressImage, compressVideo, compressVideoWithRetry, generateUniquePath, deleteFileIfExists };
