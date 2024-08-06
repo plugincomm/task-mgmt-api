@@ -30,6 +30,7 @@ const compressImage = async (inputPath, outputPath) => {
 const compressVideo = (inputPath, outputPath) => {
     return new Promise((resolve, reject) => {
         const ffmpegProcess = spawn('ffmpeg', [
+            '-y', 
             '-i', inputPath,
             '-vcodec', 'libx264',
             '-crf', '28',
