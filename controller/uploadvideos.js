@@ -4,7 +4,7 @@ const User = require('../model/user')
 const path = require('path');
 const Role = require('../model/role');
 const fs = require('fs').promises;
-const { compressImage, compressVideo, generateUniquePath, deleteFileIfExists } = require('../utils/compress');
+const { compressImage, compressVideoWithRetry, generateUniquePath, deleteFileIfExists } = require('../utils/compressionUtils');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;  
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -49,7 +49,7 @@ module.exports.addUploadVideo = async function (req, res) {
 
         for (let videoPath of videoPaths) {
             let compressVideoPath = generateUniquePath(videoPath);
-            await compressVideo(videoPath, compressVideoPath);
+            await compressVideoWithRetry(videoPath, compressVideoPath);
             compressVideoPaths.push(`${videoUrl}${path.basename(compressVideoPath)}`);
         }
 
@@ -105,7 +105,7 @@ module.exports.editUploadVideo = async function (req, res) {
 
         for (let videoPath of videoPaths) {
             let compressVideoPath = generateUniquePath(videoPath);
-            await compressVideo(videoPath, compressVideoPath);
+            await compressVideoWithRetry(videoPath, compressVideoPath);
             compressVideoPaths.push(`${videoUrl}${path.basename(compressVideoPath)}`);
         }
 
@@ -133,19 +133,19 @@ module.exports.editUploadVideo = async function (req, res) {
             video_img: compressImagePath,
             category: categoryCheck._id,
             video_upload: compressVideoPaths,
-            user:userCheck._id
-        },
-        {new:true},
-        );
-        if(uploadVideo){
-            return res.status(200).json({success:true, message:"Video Updated Successfully", updateVideo:uploadVideo})
-        }else{
-            return res.status(404).json({success:false, message:"Video Not Found"})
+            user: userCheck._id
+        }, { new: true });
+
+        if (uploadVideo) {
+            return res.status(200).json({ success: true, message: "Video Updated Successfully", updateVideo: uploadVideo });
+        } else {
+            return res.status(404).json({ success: false, message: "Video Not Found" });
         }
-    }catch {
-        return res.status(500).json({success:true, message:"Internal Server Error"})
+    } catch (err) {
+        console.error('Server error:', err);
+        return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
     } 
-}
+};
 
 
 module.exports.deleteUploadVideo = async function (req, res) {
