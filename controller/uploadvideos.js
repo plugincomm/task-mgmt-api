@@ -4,7 +4,7 @@ const User = require('../model/user')
 const path = require('path');
 const Role = require('../model/role');
 const fs = require('fs').promises;
-const { compressImage, compressVideoWithRetry, generateUniquePath, deleteFileIfExists } = require('../utils/compressionUtils');
+const { compressImage, compressVideoWithRetry, generateUniquePath, deleteFileIfExists } = require('../utils/compress');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;  
 ffmpeg.setFfmpegPath(ffmpegPath);
