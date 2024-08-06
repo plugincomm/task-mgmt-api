@@ -1,5 +1,5 @@
 const sharp = require('sharp');
-const ffmpeg = require('fluent-ffmpeg');
+const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -27,32 +27,53 @@ const compressImage = async (inputPath, outputPath) => {
     }
 };
 
-const compressVideo = async (inputPath, outputPath) => {
+const compressVideo = (inputPath, outputPath) => {
     return new Promise((resolve, reject) => {
-        if (inputPath === outputPath) {
-            return reject(new Error('Input and output paths must be different'));
-        }
+        const ffmpegProcess = spawn('ffmpeg', [
+            '-i', inputPath,
+            '-vcodec', 'libx264',
+            '-crf', '28',
+            '-preset', 'veryfast',
+            outputPath
+        ]);
 
-        console.log('Compressing video from', inputPath, 'to', outputPath);
-        ffmpeg(inputPath)
-            .outputOptions('-vcodec', 'libx264')
-            .outputOptions('-crf', '28') // Adjust CRF value to control compression quality
-            .save(outputPath)
-            .on('end', async () => {
-                console.log('Video compression finished. Deleting original file...');
-                try {
-                    await deleteFileIfExists(inputPath); // Use the delete function with retry logic
-                    resolve(outputPath);
-                } catch (unlinkError) {
-                    console.error('Error deleting original video file:', unlinkError);
-                    reject(unlinkError);
-                }
-            })
-            .on('error', (err) => {
-                console.error('Error compressing video:', err);
-                reject(err);
-            });
+        ffmpegProcess.stdout.on('data', (data) => {
+            console.log(`ffmpeg stdout: ${data}`);
+        });
+
+        ffmpegProcess.stderr.on('data', (data) => {
+            console.error(`ffmpeg stderr: ${data}`);
+        });
+
+        ffmpegProcess.on('close', (code) => {
+            if (code === 0) {
+                console.log('Video compression finished');
+                resolve(outputPath);
+            } else {
+                console.error(`ffmpeg process exited with code ${code}`);
+                reject(new Error(`ffmpeg process exited with code ${code}`));
+            }
+        });
+
+        ffmpegProcess.on('error', (err) => {
+            console.error('ffmpeg process error:', err);
+            reject(err);
+        });
     });
+};
+
+const compressVideoWithRetry = async (inputPath, outputPath, retries = 3) => {
+    try {
+        return await compressVideo(inputPath, outputPath);
+    } catch (error) {
+        if (retries > 0) {
+            console.warn(`Retrying video compression... (${retries} retries left)`);
+            await delay(2000); // Wait before retrying
+            return compressVideoWithRetry(inputPath, outputPath, retries - 1);
+        } else {
+            throw new Error('Failed to compress video after multiple attempts');
+        }
+    }
 };
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -85,7 +106,4 @@ const deleteFileIfExists = async (filePath, retries = 3) => {
     }
 };
 
-// Example usage
-deleteFileIfExists('F:\\venktesh\\videoupload\\server\\public\\uploads\\videoimg\\video_img-1722401528687.jpg');
-
-module.exports = { compressImage, compressVideo, generateUniquePath, deleteFileIfExists };
+module.exports = { compressImage, compressVideoWithRetry, generateUniquePath, deleteFileIfExists };
