@@ -10,5 +10,8 @@ router.put('/edit/:id', upload, UploadVideoController.editUploadVideo);
 router.delete('/:id', UploadVideoController.deleteUploadVideo);
 router.get('/get/counts',UploadVideoController.getUploadVideoCount);    
 
-router.put('/:id/status', upload, UploadVideoController.userStatusUpdateTask);
+router.put('/update-status/:userId/:videoId', UploadVideoController.userStatusUpdateTask);
+router.get('/user/:userId', UploadVideoController.getUserTask);
+
+
 module.exports = router;
