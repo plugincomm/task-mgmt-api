@@ -185,55 +185,41 @@ module.exports.getUploadVideoCount = async function (req, res){
     }
 }
 
-
-
-async function checkUserPermission(userId, action) {
-    try {
-        const user = await User.findById(userId).populate('role');
-        if (!user || !user.role) {
-            throw new Error('User or role not found');
-        }
-
-        const role = await Role.findById(user.role._id).populate('permissions');
-        if (!role || !role.permissions) {
-            throw new Error('Role or permissions not found');
-        }
-
-        const permission = role.permissions.find(p => p.permission_name === 'video_update');
-        return permission && permission.is_default === 1;
-    } catch (error) {
-        console.error(error);
-        return false;
-    }
-}
-
-module.exports.userStatusUpdateTask = async function (req, res){
-    const userId = req.user._id; 
-    const videoId = req.params.id;
-    const newStatus = req.body.work_status;
+module.exports.userStatusUpdateTask = async function (req, res) {
+    const { userId, videoId } = req.params; // Destructure userId and videoId from params
+    const { work_status: newStatus } = req.body;
 
     if (!['pending', 'done'].includes(newStatus)) {
         return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const hasPermission = await checkUserPermission(userId, 'video_update');
-
-    if (!hasPermission) {
-        return res.status(403).json({ message: 'You do not have permission to update video status' });
-    }
-
     try {
         const video = await UploadVideo.findById(videoId);
+
         if (!video) {
-            return res.status(404).json({ message: 'Video not found' });
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if (video.user.toString() !== userId) {
+            return res.status(403).json({ message: 'Unauthorized to update this Task' });
         }
 
         video.work_status = newStatus;
-        await video.save();
+        const updatedVideo = await video.save();
 
-        res.status(200).json({ message: 'Video status updated successfully' });
+        res.status(200).json({ message: 'Task status updated successfully', video: updatedVideo });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating video status' });
     }
 };
+
+module.exports.getUserTask = async function (req, res){
+    try {
+        const userId = req.params.userId;
+        const videos = await UploadVideo.find({ user: userId }).populate('user').populate('category');
+        res.status(200).json({ videos });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch videos' });
+    }
+}
