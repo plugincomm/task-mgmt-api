@@ -76,36 +76,52 @@ module.exports = {
         }
     },
 
-    userLogin: async function (req, res) {
+userLogin: async function (req, res) {
         try {
             const user = await User.findOne({ email: req.body.email }).populate('role');
             if (!user) {
                 return res.status(404).json({ success: false, message: "Email not found" });
             }
-    
-            // Log the user object to check the role field
+
             console.log('User:', user);
-    
-            if (!user.role) {
-                return res.status(500).json({ success: false, message: "User role is not defined" });
+
+            if (!user.role || !user.role.value) { 
+                return res.status(500).json({ success: false, message: "User role is not defined or invalid" });
             }
-    
+
             const isMatch = bcrypt.compareSync(req.body.password, user.password);
             if (isMatch) {
                 const token = jwt.sign(  
                     {
                         userId: user._id,
-                        role: user.role.value // assuming 'role' is the string identifier for the role
+                        role: user.role.value 
                     },
                     process.env.SECRET,
                     { expiresIn: '1d' }
                 );
-                return res.status(200).json({ success: true, email: user.email, token: token, role: user.role.value, userId:user._id });
+
+                return res.status(200).json({ 
+                    success: true, 
+                    email: user.email, 
+                    token: token, 
+                    role: user.role.value,
+                    userId: user._id,
+                    username: user.username,
+                    date_of_birth: user.date_of_birth,
+                    gender: user.gender,
+                    phone: user.phone,
+                    village_apartment: user.village_apartment,
+                    street: user.street,
+                    pincode: user.pincode,
+                    city: user.city,
+                    state: user.state,
+                    country: user.country
+                });
             } else {
                 return res.status(400).json({ success: false, message: "Password is incorrect!" });
             }
         } catch (err) {
-            console.log('Internal Server Error:', err);
+            console.error('Internal Server Error:', err);
             return res.status(500).json({ success: false, message: "Internal Server Error", error: err.message });
         }
     },
